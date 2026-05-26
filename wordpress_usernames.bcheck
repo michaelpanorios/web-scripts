@@ -1,0 +1,59 @@
+metadata:
+    language: v2-beta
+    name: "WordPress - Usernames Gathered via Unrestricted Endpoints"
+    description: "Discover unrestricted endpoints to identify valid users."
+    author: "Michael Panorios"
+    tags: "wp-rest-api", "user-enum"
+
+define:
+    desc_rest_api = "An attacker can gather information about valid usernames registered on the WordPress site via the REST API endpoint, which can potentially aid in further attacks such as brute force attacks or targeted phishing attempts."
+    remed_rest_api  = "Restrict access to the aforementioned endpoint"
+    desc_feed = "Users discovered via the WordPress /feed endpoint. The RSS/Atom feed exposes the <dc:creator> element, which leaks the exact WordPress username of post authors without requiring authentication."
+    remed_feed = "Disable or restrict the feed endpoint"
+
+run for each:
+    potential_path =
+        "/wp-json/wp/v2/users",
+        "/wp-json/?rest_route=/wp/v2/users/",
+        "/wp-json/wp/v2/users/1",
+        "/wp-json/wp/v2/users/2",
+        "/wp-json/wp/v2/users/3",
+        "/wp-json/wp/v2/users/4",
+        "/wp-json/wp/v2/users/5",
+        "/wp-json/?rest_route=/wp/v2/users/1",
+        "/wp-json/?rest_route=/wp/v2/users/2",
+        "/wp-json/?rest_route=/wp/v2/users/3",
+        "/wp-json/?rest_route=/wp/v2/users/4",
+        "/wp-json/?rest_route=/wp/v2/users/5",
+        "/?author=1",
+        "/?author=2",
+        "/?author=3",
+        "/?author=4",
+        "/?author=5",
+        "/wp-json/oembed/1.0/",
+        "/feed/"
+
+given host then
+    send request called check:
+        method: "GET"
+        replacing path: {potential_path}
+
+    if {check.response.status_code} is "200" and {check.response.body} matches "slug" then
+        report issue and continue:
+            severity: medium
+            confidence: certain
+            detail: `{desc_rest_api} \r\n\r\nUnrestricted endpoint which reveals valid usernames: {check.request.url.protocol}://{check.request.url.host}{potential_path}`
+            remediation: {remed_rest_api}
+    else if {check.response.status_code} is "200" and {check.response.body} matches "Index of /wp-json/oembed" then
+        report issue and continue:
+            severity: medium
+            confidence: certain
+            detail: `{desc_rest_api} \r\n\r\nUnrestricted endpoint which reveals valid usernames: {check.request.url.protocol}://{check.request.url.host}{potential_path}`
+            remediation: {remed_rest_api}
+    else if {check.response.status_code} is "200" and {check.response.body} matches "<dc:creator>" then
+        report issue and continue:
+            severity: medium
+            confidence: firm
+            detail: `{desc_feed} \r\n\r\nEndpoint which might reveal valid usernames: {check.request.url.protocol}://{check.request.url.host}{potential_path}`
+            remediation: {remed_feed}
+    end if
