@@ -1,0 +1,107 @@
+metadata:
+    language: v2-beta
+    name: "WordPress - Publicly Accessible WordPress Registration Endpoints"
+    description: "Detects publicly accessible WordPress registration endpoints."
+    author: "Alex Perrakis"
+    tags: "wordpress", "wp-register", "wp-login"
+
+define:
+    desc = "A publicly accessible WordPress registration endpoint was identified."
+    remed = "Disable public user registration if not required and restrict unnecessary authentication endpoints."
+
+run for each:
+    registration_endpoint =
+    "/wp-login.php?action=register",
+    "/wp-register.php",
+    "/wp-signup.php",
+    "/register",
+    "/signup",
+    "/sign-up",
+    "/signin/register",
+    "/site-signup/",
+    "/user/register/",
+    "/users/register/",
+    "/member/register/",
+    "/members/register/",
+    "/community/register/",
+    "/account/register/",
+    "/accounts/register/",
+    "/create-account/",
+    "/create_account/",
+    "/create-user/",
+    "/create_user/",
+    "/new-account/",
+    "/new-user/",
+    "/join/",
+    "/join-us/",
+    "/subscribe/",
+    "/become-a-member/",
+    "/activation/",
+    "/activate/",
+    "/my-account/",
+    "/my-account/register/",
+    "/account/",
+    "/customer-login/",
+    "/customer-register/",
+    "/membership-account/",
+    "/membership-account/membership-checkout/",
+    "/membership-checkout/",
+    "/courses/register/",
+    "/wp-json/wp/v2/users/register",
+    "/wp-json/users/register",
+    "/wp-json/user/register",
+    "/wp-json/register",
+    "/wp-json/signup",
+    "/wp-json/api/v1/register",
+    "/wp-json/custom/v1/register",
+    "/wp-json/mobile/v1/register",
+    "/wp-json/auth/v1/register",
+    "/wp-json/simple-jwt-login/v1/users",
+    "/wp-json/wp-rest-user/v1/register",
+    "/wp-json/jwt-auth/v1/token",
+    "/wp-admin/admin-ajax.php?action=register",
+    "/wp-admin/admin-ajax.php?action=register_user",
+    "/wp-admin/admin-ajax.php?action=nopriv_register",
+    "/wp-admin/admin-ajax.php?action=nopriv_register_user",
+    "/wp-admin/admin-ajax.php?action=user_registration",
+    "/wp-admin/admin-ajax.php?action=create_user",
+    "/wp-admin/admin-ajax.php?action=signup_user",
+    "/wp-admin/admin-ajax.php?action=woocommerce_register",
+    "/wp-admin/admin-ajax.php?action=wc_ajax_register",
+    "/wp-admin/admin-ajax.php?action=um_submit_form",
+    "/wp-admin/admin-ajax.php?action=um_register_user",
+    "/wp-admin/admin-ajax.php?action=bp_signup_submit",
+    "/wp-admin/admin-ajax.php?action=pie_register",
+    "/wordpress/wp-login.php?action=register",
+    "/blog/wp-login.php?action=register",
+    "/wp/wp-login.php?action=register",
+    "/wordpress/wp-signup.php",
+    "/blog/wp-signup.php",
+    "/wp/wp-signup.php"
+    
+
+given host then
+    send request called check:
+        method: "GET"
+        replacing path: {registration_endpoint}
+
+    if {check.response.status_code} is "200" or
+       {check.response.status_code} is "301" or
+       {check.response.status_code} is "302" then
+        if {check.response.body} matches "registerform" or
+           {check.response.body} matches "user_login" or
+           {check.response.body} matches "user_email" or
+           {check.response.body} matches "wp-submit" or
+           {check.response.body} matches "_wpnonce" or
+           {check.response.body} matches "wp-signup.php" or
+           {check.response.body} matches "wp-login.php?action=register" or
+           {check.response.body} matches "woocommerce" or
+           {check.response.body} matches "um_register" or
+           {check.response.body} matches "admin-ajax.php" then
+            report issue and continue:
+                severity: medium
+                confidence: firm
+                detail: `{desc}\r\n\r\nA WordPress registration-related endpoint appears to be publicly accessible: {check.request.url.protocol}://{check.request.url.host}{registration_endpoint}\r\n\r\nThe response contains indicators of a registration interface (WP login/register form, WooCommerce, AJAX or WP signup markers).`
+                remediation: {remed}
+        end if
+    end if
