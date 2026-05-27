@@ -1,0 +1,78 @@
+metadata:
+    language: v2-beta
+    name: "WordPress - Publicly Accessible Admin Panel"
+    description: "Detects publicly accessible WordPress admin panels."
+    author: "Alex Perrakis"
+    tags: "wordpress", "wp-admin", "wp-login"
+
+define:
+    desc = "A publicly accessible WordPress admin panel was identified."
+    remed = "Disable public admin panels if not required and restrict unnecessary authentication endpoints."
+
+run for each:
+    admin_endpoint =
+    "/wp-login.php",
+    "/wp-admin/",
+    "/wp-admin/index.php",
+    "/wp-admin/login.php",
+    "/wp-admin/admin-login.php",
+    "/wp-admin/dashboard.php",
+    "/wp-admin/user/",
+    "/admin/",
+    "/login/",
+    "/login-page/",
+    "/signin/",
+    "/sign-in/",
+    "/wpadmin/",
+    "/wp-login/",
+    "/wordpress/wp-admin/",
+    "/wordpress/wp-login.php",
+    "/blog/wp-admin/",
+    "/blog/wp-login.php",
+    "/site/wp-admin/",
+    "/cms/wp-admin/",
+    "/new/wp-admin/",
+    "/old/wp-admin/",
+    "/test/wp-admin/",
+    "/dev/wp-admin/",
+    "/wp/wp-admin/",
+    "/web/wp-admin/",
+    "/website/wp-admin/",
+    "/admin-login/",
+    "/admin-panel/",
+    "/secure-login/",
+    "/dashboard/",
+    "/control-panel/",
+    "/backend/",
+    "/manage/",
+    "/administrator/",
+    "/adm/",
+    "/moderator/",
+    "/webmaster/",
+    "/portal/",
+    "/account/login/",
+    "/user/login/",
+    "/member/login/",
+    "/wp-secure/",
+    "/wp-backend/",
+    "/hidden-login/",
+    "/secret-login/",
+    "/private/",
+    "/access/",
+    "/panel/"
+    
+
+given host then
+    send request called check:
+        method: "GET"
+        replacing path: {admin_endpoint}
+
+    if {check.response.status_code} is "200" or
+       {check.response.status_code} is "301" or
+       {check.response.status_code} is "302" then
+            report issue and continue:
+                severity: medium
+                confidence: tentative
+                detail: `{desc}\r\n\r\nA WordPress admin panel endpoint appears to be publicly accessible: {check.request.url.protocol}://{check.request.url.host}{admin_endpoint}`
+                remediation: {remed}
+    end if
