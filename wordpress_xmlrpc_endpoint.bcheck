@@ -1,0 +1,35 @@
+metadata:
+    language: v2-beta
+    name: "WordPress - Discovered XMLRPC Endpoint"
+    description: "Discover unrestricted endpoints to identify valid users."
+    author: "Michael Panorios"
+    tags: "wp-xmlrpc", "enum"
+
+define:
+    desc = "A publicly available XML-RPC interface poses a notable security risk, as it could be exploited by attackers for various malicious activities, including brute-force attacks, remote code execution, and information disclosure."
+    remed = "It is recommended to restrict access on xmlrpc endpoint."
+
+given host then
+    send request called check:
+        `POST /xmlrpc.php HTTP/1.1
+         Host: {base.request.url.host}
+         Accept-Encoding: gzip, deflate, br
+         Accept-Language: en-US;q=0.9,en;q=0.8
+         User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.70 Safari/537.36
+         Cache-Control: max-age=0
+         Content-Type: text/xml
+
+         <?xml version="1.0" encoding="utf-8"?>
+         <methodCall>
+             <methodName>system.listMethods</methodName>
+             <params></params>
+         </methodCall>`
+
+    if {check.response.body} matches "<methodResponse>" or
+        {check.response.status_code} is "200" then
+        report issue:
+            severity: medium
+            confidence: firm
+            detail: {desc}
+            remediation: {remed}
+    end if
